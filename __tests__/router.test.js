@@ -17,14 +17,75 @@ describe('Lex Router Lambda', () => {
     AWSMock.restore();
   });
 
-  describe('Intent Routing', () => {
-    test('should route BookAppointment intent to booking lambda', async () => {
+  describe('Channel-based Intent Routing', () => {
+    test('should route to web lambda when channel is web', async () => {
+      process.env.WEB_BOOKING_LAMBDA = 'web-booking-test-lambda';
+      
       const mockResponse = {
         sessionAttributes: {},
         dialogAction: {
           type: 'Close',
           fulfillmentState: 'Fulfilled',
-          message: { contentType: 'PlainText', content: 'Booking confirmed' }
+          message: { contentType: 'PlainText', content: 'Web booking confirmed' }
+        }
+      };
+
+      AWSMock.mock('Lambda', 'invoke', (params, callback) => {
+        expect(params.FunctionName).toBe('web-booking-test-lambda');
+        callback(null, {
+          StatusCode: 200,
+          Payload: JSON.stringify(mockResponse)
+        });
+      });
+
+      const event = {
+        currentIntent: { name: 'BookAppointment', slots: {} },
+        sessionAttributes: {},
+        requestAttributes: { channel: 'web' },
+        inputTranscript: 'Book appointment'
+      };
+
+      const result = await handler(event);
+      expect(result).toEqual(mockResponse);
+    });
+
+    test('should route to mobile lambda when channel is mobile', async () => {
+      process.env.MOBILE_BOOKING_LAMBDA = 'mobile-booking-test-lambda';
+      
+      const mockResponse = {
+        sessionAttributes: {},
+        dialogAction: {
+          type: 'Close',
+          fulfillmentState: 'Fulfilled',
+          message: { contentType: 'PlainText', content: 'Mobile booking confirmed' }
+        }
+      };
+
+      AWSMock.mock('Lambda', 'invoke', (params, callback) => {
+        expect(params.FunctionName).toBe('mobile-booking-test-lambda');
+        callback(null, {
+          StatusCode: 200,
+          Payload: JSON.stringify(mockResponse)
+        });
+      });
+
+      const event = {
+        currentIntent: { name: 'BookAppointment', slots: {} },
+        sessionAttributes: { channel: 'mobile' },
+        inputTranscript: 'Book appointment'
+      };
+
+      const result = await handler(event);
+      expect(result).toEqual(mockResponse);
+    });
+
+    test('should route to default lambda when no channel specified', async () => {
+      const mockResponse = {
+        sessionAttributes: {},
+        dialogAction: {
+          type: 'Close',
+          fulfillmentState: 'Fulfilled',
+          message: { contentType: 'PlainText', content: 'Default booking confirmed' }
         }
       };
 

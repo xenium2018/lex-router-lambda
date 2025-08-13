@@ -13,6 +13,33 @@ const testEvents = {
     inputTranscript: 'Book a haircut for January 15th at 2pm'
   },
 
+  webBookingIntent: {
+    currentIntent: {
+      name: 'BookAppointment',
+      slots: {
+        Service: 'massage',
+        Date: '2024-01-20',
+        Time: '10:00'
+      }
+    },
+    sessionAttributes: {},
+    requestAttributes: { channel: 'web' },
+    inputTranscript: 'Book a massage via web'
+  },
+
+  mobileBookingIntent: {
+    currentIntent: {
+      name: 'BookAppointment',
+      slots: {
+        Service: 'consultation',
+        Date: '2024-01-25',
+        Time: '16:00'
+      }
+    },
+    sessionAttributes: { channel: 'mobile' },
+    inputTranscript: 'Book consultation via mobile app'
+  },
+
   statusIntent: {
     currentIntent: {
       name: 'CheckStatus',
