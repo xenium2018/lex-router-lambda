@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  LexRouterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Timeout: 30
+      Environment:
+        Variables:
+          BOOKING_LAMBDA: booking-fulfillment-lambda
+          STATUS_LAMBDA: status-check-lambda
+          CANCEL_LAMBDA: cancel-order-lambda
+          INFO_LAMBDA: info-retrieval-lambda
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource: '*'
+
+Outputs:
+  LexRouterFunctionArn:
+    Description: "Lex Router Lambda Function ARN"
+    Value: !GetAtt LexRouterFunction.Arn
