@@ -1,36 +1,50 @@
-const AWSMock = require('aws-sdk-mock');
-const AWS = require('aws-sdk');
-const { handler } = require('./index');
+// Mock AWS SDK before requiring the handler
+jest.mock('aws-sdk', () => {
+  const mockInvoke = jest.fn();
+  return {
+    Lambda: jest.fn(() => ({
+      invoke: mockInvoke
+    })),
+    __mockInvoke: mockInvoke
+  };
+});
 
-AWSMock.setSDKInstance(AWS);
+const AWS = require('aws-sdk');
+const { handler, INTENT_ROUTES } = require('./index');
 
 describe('Lex Router', () => {
   beforeEach(() => {
-    AWSMock.restore('Lambda');
+    // Clear previous mocks
+    AWS.__mockInvoke.mockClear();
+    
     // Set up test route
-    const router = require('./index');
-    router.INTENT_ROUTES = { TestIntent: 'test-lambda' };
-  });
-
-  afterEach(() => {
-    AWSMock.restore();
+    INTENT_ROUTES.TestIntent = 'test-lambda';
   });
 
   test('routes intent to configured lambda', async () => {
     const mockResponse = { dialogAction: { type: 'Close' } };
     
-    AWSMock.mock('Lambda', 'invoke', (params, callback) => {
-      expect(params.FunctionName).toBe('test-lambda');
-      callback(null, { StatusCode: 200, Payload: JSON.stringify(mockResponse) });
+    AWS.__mockInvoke.mockReturnValue({
+      promise: () => Promise.resolve({
+        StatusCode: 200,
+        Payload: JSON.stringify(mockResponse)
+      })
     });
 
     const event = { currentIntent: { name: 'TestIntent' } };
     const result = await handler(event);
     
+    expect(AWS.__mockInvoke).toHaveBeenCalledWith({
+      FunctionName: 'test-lambda',
+      InvocationType: 'RequestResponse',
+      Payload: JSON.stringify(event)
+    });
     expect(result).toEqual(mockResponse);
   });
 
   test('handles unknown intent', async () => {
+    delete INTENT_ROUTES.TestIntent;
+    
     const event = { currentIntent: { name: 'UnknownIntent' } };
     const result = await handler(event);
     
@@ -39,8 +53,8 @@ describe('Lex Router', () => {
   });
 
   test('handles lambda invocation error', async () => {
-    AWSMock.mock('Lambda', 'invoke', (params, callback) => {
-      callback(new Error('Lambda error'));
+    AWS.__mockInvoke.mockReturnValue({
+      promise: () => Promise.reject(new Error('Lambda error'))
     });
 
     const event = { currentIntent: { name: 'TestIntent' } };
